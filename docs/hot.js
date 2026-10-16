@@ -1,6 +1,6 @@
 /* Crypto Hot Tracker — client-side scorer (mirrors src/scorer.py + run_once.py). Read-only, no keys, no orders. */
 (function (root) {
-  const CFG = {"binance_base_url": "https://api.binance.com", "quote_asset": "USDT", "min_quote_volume_usdt": 5000000, "top_n": 20, "klines_interval": "15m", "klines_limit": 24, "vol_spike_lookback": 16, "weights": {"pct_15m": 0.35, "pct_1h": 0.2, "vol_spike": 0.3, "quote_vol_rank": 0.15}, "stable_bases": ["USDC", "FDUSD", "TUSD", "BUSD", "DAI", "USDP", "USDE", "USD1", "EUR", "AEUR", "EURI", "GBP", "AUD", "TRY", "BRL", "BIDR", "PAX", "UST", "USTC", "USDD", "GUSD", "SUSD", "FRAX", "LUSD", "PYUSD", "USDJ", "XUSD", "BFUSD", "U", "RLUSD", "RWUSD"], "denylist_file": "denylist.txt", "request_timeout_sec": 15, "max_retries": 4, "backoff_base_sec": 1.0, "klines_batch_pause_sec": 0.05, "include_majors": true, "klines_workers": 8};
+  const CFG = {"binance_base_url": "https://api.binance.com", "quote_asset": "USDT", "min_quote_volume_usdt": 5000000, "top_n": 20, "klines_interval": "15m", "klines_limit": 25, "vol_spike_lookback": 16, "weights": {"pct_15m": 0.35, "pct_1h": 0.2, "vol_spike": 0.3, "quote_vol_rank": 0.15}, "stable_bases": ["USDC", "FDUSD", "TUSD", "BUSD", "DAI", "USDP", "USDE", "USD1", "EUR", "AEUR", "EURI", "GBP", "AUD", "TRY", "BRL", "BIDR", "PAX", "UST", "USTC", "USDD", "GUSD", "SUSD", "FRAX", "LUSD", "PYUSD", "USDJ", "XUSD", "BFUSD", "U", "RLUSD", "RWUSD"], "denylist_file": "denylist.txt", "request_timeout_sec": 15, "max_retries": 4, "backoff_base_sec": 1.0, "klines_batch_pause_sec": 0.05, "include_majors": true, "klines_workers": 8};
   const DENY = new Set([]);
   const BASES = ["https://api.binance.com", "https://data-api.binance.vision", "https://api1.binance.com", "https://api2.binance.com", "https://api3.binance.com"];
   let goodBase = null;
@@ -41,8 +41,12 @@
     return out;
   }
 
-  function klineMetrics(kl, lb) {
-    if (!kl || kl.length < 5) return null;
+  function klineMetrics(full, lb, nowMs) {
+    if (!full || full.length < 6) return null;
+    // Score on CLOSED candles only; the forming one is kept for price/charts.
+    nowMs = nowMs == null ? Date.now() : nowMs;
+    const kl = Number(full[full.length - 1][6]) > nowMs ? full.slice(0, -1) : full;
+    if (kl.length < 5) return null;
     const c = kl.map(k => parseFloat(k[4]) || 0), v = kl.map(k => parseFloat(k[7]) || 0);
     const now = c[c.length - 1], c15 = c[c.length - 2], c1h = c[c.length - 5];
     if (c15 <= 0 || c1h <= 0 || now <= 0) return null;
@@ -50,8 +54,8 @@
     if (prior.length < Math.max(4, Math.floor(lb / 2))) prior = v.slice(0, -1);
     if (!prior.length) return null;
     const avg = prior.reduce((a, b) => a + b, 0) / prior.length;
-    const lows = kl.map(k => parseFloat(k[3]) || 0);
-    return { closes: c, low_1h: Math.min(...lows.slice(-4)), pct_15m: (now - c15) / c15 * 100, pct_1h: (now - c1h) / c1h * 100, vol_spike: avg > 0 ? v[v.length - 1] / avg : 0, price: now };
+    const lows = full.map(k => parseFloat(k[3]) || 0), allC = full.map(k => parseFloat(k[4]) || 0);
+    return { closes: allC.slice(-24), low_1h: Math.min(...lows.slice(-4)), pct_15m: (now - c15) / c15 * 100, pct_1h: (now - c1h) / c1h * 100, vol_spike: avg > 0 ? v[v.length - 1] / avg : 0, price: now };
   }
 
   function minmax(a) {

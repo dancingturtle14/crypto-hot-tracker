@@ -82,15 +82,15 @@ async function loadChart(sym,stop){const lim=range*4,k=sym+":"+lim;let kl=klCach
  if(active!==sym||!$("dchart"))return;drawChart(kl,stop);}
 function drawChart(kl,stop){const box=$("dchart"),W=600,PH=220,VH=60,H2=PH+VH+18;
  const c=kl.map(k=>+k[4]),hi=kl.map(k=>+k[2]),lo=kl.map(k=>+k[3]),v=kl.map(k=>+k[7]),o=kl.map(k=>+k[1]),t=kl.map(k=>k[0]);
- const mn=Math.min(...lo,stop==null?Infinity:stop),mx=Math.max(...hi),rg=mx-mn||1,n=kl.length,bw=W/n,mv=Math.max(...v)||1;
+ const mn=Math.min(...lo,stop==null?Infinity:stop),mx=Math.max(...hi),rg=mx-mn||1,n=kl.length,PW=W-58,bw=PW/n,mv=Math.max(...v)||1;
  const Y=p=>8+(mx-p)/rg*(PH-16),X=i=>i*bw+bw/2;
  let s='<svg id="dsvg" viewBox="0 0 '+W+' '+H2+'" style="touch-action:pan-y">';
- for(let g=0;g<=3;g++){const p=mn+rg*g/3;s+='<line x1="0" x2="'+W+'" y1="'+Y(p)+'" y2="'+Y(p)+'" stroke="#303030"/><text x="'+(W-2)+'" y="'+(Y(p)-2)+'" fill="#777" font-size="10" text-anchor="end">'+px(p)+'</text>';}
+ for(let g=0;g<=3;g++){const p=mn+rg*g/3;s+='<line x1="0" x2="'+PW+'" y1="'+Y(p)+'" y2="'+Y(p)+'" stroke="#303030"/><text x="'+(W-2)+'" y="'+(Y(p)+3)+'" fill="#777" font-size="10" text-anchor="end">'+px(p)+'</text>';}
  for(let i=0;i<n;i++){const up=c[i]>=o[i],col=up?"#4ade80":"#fb7185";s+='<line x1="'+X(i)+'" x2="'+X(i)+'" y1="'+Y(hi[i])+'" y2="'+Y(lo[i])+'" stroke="'+col+'" opacity=".7"/><rect x="'+(X(i)-bw*.35)+'" width="'+(bw*.7)+'" y="'+Y(Math.max(o[i],c[i]))+'" height="'+Math.max(1,Math.abs(Y(o[i])-Y(c[i])))+'" fill="'+col+'"/><rect x="'+(X(i)-bw*.35)+'" width="'+(bw*.7)+'" y="'+(H2-v[i]/mv*VH)+'" height="'+(v[i]/mv*VH)+'" fill="'+col+'" opacity=".4"/>';}
  if(stop!=null)s+='<line x1="0" x2="'+W+'" y1="'+Y(stop)+'" y2="'+Y(stop)+'" stroke="#fbbf24" stroke-dasharray="6 4" stroke-width="1.5"/><text x="4" y="'+(Y(stop)+12)+'" fill="#fbbf24" font-size="10">參考止蝕 '+px(stop)+'</text>';
  s+='<line id="cx" y1="0" y2="'+H2+'" stroke="#a88bfa" stroke-dasharray="3 3" visibility="hidden"/><line id="cy" x1="0" x2="'+W+'" stroke="#a88bfa" stroke-dasharray="3 3" visibility="hidden"/></svg><div class="small" style="display:flex;justify-content:space-between"><span>'+hkt(t[0])+' HKT</span><span>成交量</span><span>'+hkt(t[n-1])+' HKT</span></div>';
  box.innerHTML=s;const svg=$("dsvg"),tip=$("ctip");
- const mvH=e=>{const rc=svg.getBoundingClientRect(),i=Math.max(0,Math.min(n-1,Math.floor((e.clientX-rc.left)/rc.width*n)));
+ const mvH=e=>{const rc=svg.getBoundingClientRect(),i=Math.max(0,Math.min(n-1,Math.floor((e.clientX-rc.left)/rc.width*W/bw)));
   $("cx").setAttribute("x1",X(i));$("cx").setAttribute("x2",X(i));$("cx").setAttribute("visibility","visible");
   $("cy").setAttribute("y1",Y(c[i]));$("cy").setAttribute("y2",Y(c[i]));$("cy").setAttribute("visibility","visible");
   tip.innerHTML='<b>'+px(c[i])+'</b> · '+hkt(t[i])+' HKT<br><span class="'+cls(c[i]-o[i])+'">'+pct((c[i]-o[i])/o[i]*100)+'</span> · 量 '+vol(v[i]);

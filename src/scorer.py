@@ -25,6 +25,7 @@ def _f(x: Any, default: float = 0.0) -> float:
 def parse_kline_metrics(
     klines: list[list[Any]],
     vol_spike_lookback: int = 16,
+    now_ms: int | None = None,
 ) -> dict[str, float] | None:
     """Derive pct_15m, pct_1h, vol_spike from 15m klines.
 
@@ -32,11 +33,18 @@ def parse_kline_metrics(
       [0] open time, [1] open, [2] high, [3] low, [4] close,
       [5] volume, [6] close time, [7] quote volume, ...
 
-    Uses the currently forming candle as "now" close/volume.
+    Scores on the last CLOSED candle: a still-forming candle (close time > now)
+    is dropped first, so results don't collapse right after a 15m boundary.
     pct_15m: (close_now - close_1_ago) / close_1_ago
     pct_1h:  (close_now - close_4_ago) / close_4_ago   (4 * 15m = 1h)
     vol_spike: quote_vol_now / mean(quote_vol of prior lookback completed candles)
     """
+    if klines:
+        if now_ms is None:
+            import time
+            now_ms = int(time.time() * 1000)
+        if int(_f(klines[-1][6])) > now_ms:
+            klines = klines[:-1]
     if not klines or len(klines) < 5:
         return None
 
@@ -52,7 +60,7 @@ def parse_kline_metrics(
     pct_15m = (c_now - c_15m) / c_15m * 100.0
     pct_1h = (c_now - c_1h) / c_1h * 100.0
 
-    # Prior completed candles only (exclude forming last)
+    # Baseline = closed candles before the last closed one
     prior = quote_vols[-(vol_spike_lookback + 1) : -1]
     if len(prior) < max(4, vol_spike_lookback // 2):
         prior = quote_vols[:-1]

@@ -4,7 +4,7 @@
   "min_quote_volume_usdt": 5000000,
   "top_n": 20,
   "klines_interval": "15m",
-  "klines_limit": 20,
+  "klines_limit": 21,
   "vol_spike_lookback": 16,
   "weights": {
     "pct_15m": 0.35,
