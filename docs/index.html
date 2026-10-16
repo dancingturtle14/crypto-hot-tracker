@@ -1,530 +1,108 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f1419" />
-  <title>Crypto Hot Tracker</title>
-  <style>
-    :root {
-      --bg: #0f1419;
-      --surface: #1a2332;
-      --surface2: #243044;
-      --border: #2d3a4f;
-      --text: #e7ecf3;
-      --muted: #8b9bb4;
-      --accent: #5b9fd4;
-      --green: #3dcf8e;
-      --red: #f07178;
-      --warn: #e6b84d;
-      --score: #7eb8f0;
-      --radius: 10px;
-      --font: "SF Pro Text", "Segoe UI", system-ui, -apple-system, sans-serif;
-      --mono: "SF Mono", "Menlo", "Consolas", monospace;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.45;
-      min-height: 100dvh;
-      padding: 12px 12px 48px;
-      -webkit-font-smoothing: antialiased;
-    }
-    .wrap { max-width: 1100px; margin: 0 auto; }
-    header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 8px 16px;
-      margin-bottom: 14px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-    h1 {
-      font-size: 1.25rem;
-      font-weight: 650;
-      letter-spacing: -0.02em;
-    }
-    .sub { color: var(--muted); font-size: 0.85rem; }
-    .status-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px 14px;
-      align-items: center;
-      margin-bottom: 12px;
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      padding: 4px 10px;
-    }
-    .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--green);
-      flex-shrink: 0;
-    }
-    .dot.stale { background: var(--warn); }
-    .dot.err { background: var(--red); }
-    .banner {
-      display: none;
-      background: rgba(230, 184, 77, 0.12);
-      border: 1px solid rgba(230, 184, 77, 0.45);
-      color: var(--warn);
-      border-radius: var(--radius);
-      padding: 10px 12px;
-      margin-bottom: 12px;
-      font-size: 0.9rem;
-    }
-    .banner.show { display: block; }
-    .banner.err {
-      background: rgba(240, 113, 120, 0.12);
-      border-color: rgba(240, 113, 120, 0.45);
-      color: var(--red);
-    }
-    .filters {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px;
-      margin-bottom: 14px;
-    }
-    @media (min-width: 640px) {
-      .filters { grid-template-columns: 1.2fr 1fr 1fr; align-items: end; }
-    }
-    .field label {
-      display: block;
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .field input[type="number"] {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-size: 1rem;
-      font-family: var(--mono);
-    }
-    .checks {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding-top: 2px;
-    }
-    .checks label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      user-select: none;
-    }
-    .checks input { width: 16px; height: 16px; accent-color: var(--accent); }
-    .meta-line {
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-    .table-wrap {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.875rem;
-      min-width: 720px;
-    }
-    th {
-      text-align: left;
-      padding: 10px 10px;
-      color: var(--muted);
-      font-weight: 600;
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-      position: sticky;
-      top: 0;
-      background: var(--surface2);
-    }
-    th.num, td.num { text-align: right; }
-    td {
-      padding: 10px 10px;
-      border-bottom: 1px solid rgba(45, 58, 79, 0.55);
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(91, 159, 212, 0.06); }
-    .sym a {
-      color: var(--text);
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .sym a:hover { color: var(--accent); text-decoration: underline; }
-    .score {
-      font-family: var(--mono);
-      font-weight: 650;
-      color: var(--score);
-    }
-    .pos { color: var(--green); }
-    .neg { color: var(--red); }
-    .mono { font-family: var(--mono); font-size: 0.84em; }
-    .empty {
-      text-align: center;
-      padding: 32px 16px;
-      color: var(--muted);
-    }
-    footer {
-      margin-top: 16px;
-      font-size: 0.75rem;
-      color: var(--muted);
-      text-align: center;
-    }
-    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    button.refresh {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
-    button.refresh:hover { border-color: var(--accent); color: var(--accent); }
-    button.refresh:disabled { opacity: 0.5; cursor: wait; }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <header>
-      <h1>Crypto Hot Tracker</h1>
-      <span class="sub">成交量 + 短線動能 · 人手 day trade · 唔自動下單</span>
-    </header>
+<html lang="zh-Hant"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1419"><title>幣圈熱度雷達</title>
+<style>
+:root{--bg:#0f1419;--s:#1a2332;--s2:#243044;--b:#2d3a4f;--t:#e7ecf3;--m:#8b9bb4;--g:#3dcf8e;--r:#f07178;--w:#e6b84d;--a:#5b9fd4}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"PingFang HK","Noto Sans TC",sans-serif;background:var(--bg);color:var(--t);line-height:1.45;padding:12px 12px 40px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+h1{font-size:1.2rem}h2{font-size:1.05rem;margin:18px 0 8px}
+.small{font-size:.78rem;color:var(--m)}
+button{background:var(--s2);border:1px solid var(--b);color:var(--t);border-radius:8px;padding:7px 12px;font-size:.9rem}
+.mood{border-radius:12px;padding:12px 14px;border:1px solid var(--b);background:var(--s)}
+.mood .big{font-size:1.4rem;font-weight:700}
+.mood.strong{border-color:var(--g)}.mood.strong .big{color:var(--g)}
+.mood.neutral .big{color:var(--a)}
+.mood.weak{border-color:var(--w)}.mood.weak .big{color:var(--w)}
+.bar{height:8px;background:var(--s2);border-radius:4px;margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;background:var(--g)}
+.card{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:14px;margin-bottom:10px}
+.card.warn{border-color:rgba(230,184,77,.6)}.card.hot{border-color:rgba(61,207,142,.6)}
+.ch{display:flex;justify-content:space-between;align-items:center}
+.coin{font-size:1.6rem;font-weight:800;color:var(--t);text-decoration:none}
+.badge{font-size:.95rem;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--s2)}
+.badge.hot{color:var(--g)}.badge.up{color:var(--a)}.badge.warn{color:var(--w)}
+.why{font-size:1rem;margin:8px 0}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.nums div{background:var(--bg);border-radius:8px;padding:6px 8px}
+.nums b{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.pos{color:var(--g)}.neg{color:var(--r)}
+svg{display:block;width:100%}
+.panel{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px}
+.brow{display:grid;grid-template-columns:70px 1fr 40px;align-items:center;gap:8px;margin:5px 0;font-size:.9rem}
+.brow .t{height:14px;background:var(--s2);border-radius:4px;overflow:hidden}.brow .t i{display:block;height:100%;background:var(--a)}
+details{margin-top:12px}summary{cursor:pointer;padding:10px 12px;background:var(--s);border:1px solid var(--b);border-radius:10px;font-weight:600}
+.tw{overflow-x:auto;margin-top:8px}table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:620px}
+th,td{padding:8px;border-bottom:1px solid var(--b);text-align:right;white-space:nowrap}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}th{color:var(--m);font-weight:600}
+.set{display:grid;gap:10px;padding:12px;background:var(--s);border-radius:10px;margin-top:8px}
+.set input[type=number]{width:100%;background:var(--bg);border:1px solid var(--b);color:var(--t);border-radius:8px;padding:8px;font-size:1rem}
+.msg{padding:10px;border-radius:10px;background:rgba(230,184,77,.12);color:var(--w);margin:10px 0;display:none}.msg.show{display:block}
+footer{margin-top:18px;font-size:.75rem;color:var(--m);text-align:center}
+</style></head><body><div class="wrap">
+<header><div><h1>🔥 幣圈熱度雷達</h1><div class="small" id="st">載入緊即時數據…</div></div><button id="btnR">刷新</button></header>
+<div id="msg" class="msg"></div>
+<div id="mood" class="mood"><div class="small">市況</div><div class="big">—</div></div>
 
-    <div class="status-row">
-      <span class="pill"><span id="statusDot" class="dot"></span> <span id="statusText">載入中…</span></span>
-      <span class="pill">數據 <span id="dataAge">—</span></span>
-      <span class="pill">下次刷新 <span id="nextRefresh">—</span></span>
-      <button type="button" class="refresh" id="btnRefresh">立即刷新</button>
-    </div>
+<h2>而家值得留意</h2>
+<div id="cards"><div class="card small">計緊…</div></div>
 
-    <div id="banner" class="banner" role="status"></div>
+<h2>熱度排行 Top 10</h2>
+<div class="panel"><div id="bars"></div>
+<div class="small" style="margin-top:6px">熱度分數 0–100：綜合15分鐘升幅、1小時升幅、成交量倍數同成交額，越高越熱。</div></div>
 
-    <div class="filters">
-      <div class="field">
-        <label for="minVol">Min 24h volume (USDT)</label>
-        <input type="number" id="minVol" min="0" step="100000" value="5000000" />
-      </div>
-      <div class="checks">
-        <label><input type="checkbox" id="excludeMajors" /> Exclude majors (BTC / ETH)</label>
-        <label><input type="checkbox" id="excludeGold" checked /> Exclude gold (PAXG / XAUT)</label>
-      </div>
-      <div class="meta-line" id="filterSummary" style="align-self:end; margin:0;">—</div>
-    </div>
+<h2>升幅 vs 成交量</h2>
+<div class="panel"><div id="scatter"></div>
+<div class="small">右上角 = 升得多又多人買，最值得睇。點大細 = 熱度分數。</div></div>
 
-    <div class="meta-line" id="metaLine">—</div>
+<details><summary>⚙️ 設定</summary><div class="set">
+<label class="small">最低24小時成交額 (USDT)<input type="number" id="minVol" value="5000000" step="1000000"></label>
+<label><input type="checkbox" id="exMaj"> 唔睇 BTC / ETH</label>
+<label><input type="checkbox" id="exGold" checked> 唔睇黃金幣 (PAXG / XAUT)</label>
+</div></details>
+<details><summary>📋 睇詳細數據</summary><div class="tw"><table><thead><tr><th>#</th><th>幣</th><th>熱度分數</th><th>價格</th><th>15分鐘升幅</th><th>1小時升幅</th><th>24小時升跌</th><th>成交量倍數</th><th>24小時成交額</th></tr></thead><tbody id="tb"></tbody></table></div></details>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Symbol</th>
-            <th class="num">Score</th>
-            <th class="num">Price</th>
-            <th class="num">15m %</th>
-            <th class="num">1h %</th>
-            <th class="num">24h %</th>
-            <th class="num">Vol spike</th>
-            <th class="num">24h Vol</th>
-          </tr>
-        </thead>
-        <tbody id="tbody">
-          <tr><td colspan="9" class="empty">Loading live Binance data… 載入緊…</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <footer>
-      Read-only · live from Binance in your browser · 唯讀，不會下單 · refresh every <span id="pollSec">90</span>s ·
-      stale banner if data &gt; 10 min old
-    </footer>
-  </div>
-
-  <script src="hot.js"></script>
-  <script>
-    (function () {
-      const POLL_MS = 90_000;
-      const STALE_MS = 10 * 60_000;
-      const MAJORS = new Set(["BTCUSDT", "ETHUSDT"]);
-      const GOLD = new Set(["PAXGUSDT", "XAUTUSDT"]);
-      // Prefer absolute path when served from project root; fall back for file:// or nested.
-      const JSON_URLS = ["/out/latest.json", "../out/latest.json", "./latest.json"];
-
-      const el = {
-        tbody: document.getElementById("tbody"),
-        banner: document.getElementById("banner"),
-        statusDot: document.getElementById("statusDot"),
-        statusText: document.getElementById("statusText"),
-        dataAge: document.getElementById("dataAge"),
-        nextRefresh: document.getElementById("nextRefresh"),
-        metaLine: document.getElementById("metaLine"),
-        filterSummary: document.getElementById("filterSummary"),
-        minVol: document.getElementById("minVol"),
-        excludeMajors: document.getElementById("excludeMajors"),
-        excludeGold: document.getElementById("excludeGold"),
-        btnRefresh: document.getElementById("btnRefresh"),
-        pollSec: document.getElementById("pollSec"),
-      };
-      el.pollSec.textContent = String(POLL_MS / 1000);
-
-      let raw = null;
-      let pollTimer = null;
-      let countdownTimer = null;
-      let nextAt = 0;
-
-      function fmtPct(v) {
-        if (v == null || Number.isNaN(v)) return "—";
-        const n = Number(v);
-        const s = (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
-        return s;
-      }
-      function pctClass(v) {
-        if (v == null || Number.isNaN(v)) return "";
-        return Number(v) >= 0 ? "pos" : "neg";
-      }
-      function fmtPrice(v) {
-        const n = Number(v);
-        if (!Number.isFinite(n)) return "—";
-        if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-        if (n >= 1) return n.toFixed(4);
-        if (n >= 0.01) return n.toFixed(5);
-        return n.toPrecision(4);
-      }
-      function fmtVol(v) {
-        const n = Number(v);
-        if (!Number.isFinite(n)) return "—";
-        if (n >= 1e9) return "$" + (n / 1e9).toFixed(2) + "B";
-        if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
-        if (n >= 1e3) return "$" + (n / 1e3).toFixed(1) + "K";
-        return "$" + n.toFixed(0);
-      }
-      function fmtSpike(v) {
-        if (v == null || Number.isNaN(v)) return "—";
-        return Number(v).toFixed(2) + "x";
-      }
-      function fmtScore(v) {
-        if (v == null || Number.isNaN(v)) return "—";
-        return Number(v).toFixed(1);
-      }
-      function parseUpdated(s) {
-        if (!s) return null;
-        const d = new Date(s);
-        return Number.isNaN(d.getTime()) ? null : d;
-      }
-      function ageLabel(updated) {
-        if (!updated) return "unknown";
-        const ms = Date.now() - updated.getTime();
-        if (ms < 0) return "just now";
-        const sec = Math.floor(ms / 1000);
-        if (sec < 60) return sec + "s ago";
-        const min = Math.floor(sec / 60);
-        if (min < 60) return min + "m ago";
-        const hr = Math.floor(min / 60);
-        return hr + "h " + (min % 60) + "m ago";
-      }
-      function binanceUrl(symbol) {
-        // BTCUSDT → BTC_USDT
-        const m = String(symbol).match(/^(.+)(USDT|USDC|BUSD|FDUSD)$/i);
-        const pair = m ? m[1] + "_" + m[2] : symbol;
-        return "https://www.binance.com/en/trade/" + encodeURIComponent(pair) + "?type=spot";
-      }
-
-      function applyFilters(rows) {
-        const minVol = Number(el.minVol.value) || 0;
-        const exMaj = el.excludeMajors.checked;
-        const exGold = el.excludeGold.checked;
-        return rows.filter(function (r) {
-          if (Number(r.quote_volume_24h) < minVol) return false;
-          const sym = String(r.symbol || "").toUpperCase();
-          if (exMaj && MAJORS.has(sym)) return false;
-          if (exGold && GOLD.has(sym)) return false;
-          return true;
-        });
-      }
-
-      function render() {
-        if (!raw || !Array.isArray(raw.rows)) {
-          el.tbody.innerHTML = '<tr><td colspan="9" class="empty">No data</td></tr>';
-          return;
-        }
-        const filtered = applyFilters(raw.rows);
-        el.filterSummary.textContent =
-          "Showing " + filtered.length + " / " + raw.rows.length + " rows (file Top " + (raw.top_n || "—") + ")";
-        el.metaLine.textContent =
-          "updated_at: " + (raw.updated_at || "—") +
-          " · universe_scored: " + (raw.universe_scored ?? "—") +
-          " · count in file: " + (raw.count ?? raw.rows.length);
-
-        if (!filtered.length) {
-          el.tbody.innerHTML = '<tr><td colspan="9" class="empty">No rows match filters</td></tr>';
-          return;
-        }
-
-        el.tbody.innerHTML = filtered.map(function (r, i) {
-          return (
-            "<tr>" +
-            "<td class=\"num\">" + (i + 1) + "</td>" +
-            "<td class=\"sym\"><a href=\"" + binanceUrl(r.symbol) + "\" target=\"_blank\" rel=\"noopener\">" +
-              escapeHtml(r.symbol) + "</a></td>" +
-            "<td class=\"num score\">" + fmtScore(r.score) + "</td>" +
-            "<td class=\"num mono\">" + fmtPrice(r.price) + "</td>" +
-            "<td class=\"num mono " + pctClass(r.pct_15m) + "\">" + fmtPct(r.pct_15m) + "</td>" +
-            "<td class=\"num mono " + pctClass(r.pct_1h) + "\">" + fmtPct(r.pct_1h) + "</td>" +
-            "<td class=\"num mono " + pctClass(r.pct_24h) + "\">" + fmtPct(r.pct_24h) + "</td>" +
-            "<td class=\"num mono\">" + fmtSpike(r.vol_spike) + "</td>" +
-            "<td class=\"num mono\">" + fmtVol(r.quote_volume_24h) + "</td>" +
-            "</tr>"
-          );
-        }).join("");
-      }
-
-      function escapeHtml(s) {
-        return String(s)
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;");
-      }
-
-      function setBanner(msg, isErr) {
-        if (!msg) {
-          el.banner.className = "banner";
-          el.banner.textContent = "";
-          return;
-        }
-        el.banner.className = "banner show" + (isErr ? " err" : "");
-        el.banner.textContent = msg;
-      }
-
-      function updateStatus(ok, errMsg) {
-        const updated = raw ? parseUpdated(raw.updated_at) : null;
-        const ageMs = updated ? Date.now() - updated.getTime() : null;
-        const stale = ageMs != null && ageMs > STALE_MS;
-
-        el.dataAge.textContent = ageLabel(updated);
-
-        if (!ok) {
-          el.statusDot.className = "dot err";
-          el.statusText.textContent = "Fetch failed";
-          setBanner(errMsg || "Cannot reach Binance API (api.binance.com / data-api.binance.vision). 連唔到 Binance，請稍後再試。", true);
-          return;
-        }
-        if (stale) {
-          el.statusDot.className = "dot stale";
-          el.statusText.textContent = "Stale data";
-          setBanner(
-            "Data is older than 10 minutes (" + ageLabel(updated) + "). Auto-refresh may be paused; press Refresh. 請撳 Refresh。",
-            false
-          );
-        } else {
-          el.statusDot.className = "dot";
-          el.statusText.textContent = "Live";
-          setBanner("");
-        }
-      }
-
-      async function fetchJson() {
-        const data = await window.HotTracker.compute({ topN: 30 });
-        return { data: data, url: data.source };
-      }
-
-      async function load(manual) {
-        if (manual) el.btnRefresh.disabled = true;
-        try {
-          const { data } = await fetchJson();
-          raw = data;
-          render();
-          updateStatus(true);
-        } catch (e) {
-          updateStatus(false, String(e.message || e));
-          if (!raw) {
-            el.tbody.innerHTML = '<tr><td colspan="9" class="empty">Failed to load Binance data 載入失敗</td></tr>';
-          }
-        } finally {
-          el.btnRefresh.disabled = false;
-          scheduleNext();
-        }
-      }
-
-      function scheduleNext() {
-        if (pollTimer) clearTimeout(pollTimer);
-        nextAt = Date.now() + POLL_MS;
-        pollTimer = setTimeout(function () { load(false); }, POLL_MS);
-        tickCountdown();
-      }
-
-      function tickCountdown() {
-        if (countdownTimer) clearInterval(countdownTimer);
-        function paint() {
-          const left = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
-          el.nextRefresh.textContent = left + "s";
-        }
-        paint();
-        countdownTimer = setInterval(paint, 1000);
-      }
-
-      ["minVol", "excludeMajors", "excludeGold"].forEach(function (id) {
-        document.getElementById(id).addEventListener("input", render);
-        document.getElementById(id).addEventListener("change", render);
-      });
-      el.btnRefresh.addEventListener("click", function () { load(true); });
-
-      // Persist filter prefs lightly
-      try {
-        const saved = JSON.parse(localStorage.getItem("cht_filters_v1") || "null");
-        if (saved) {
-          if (saved.minVol != null) el.minVol.value = saved.minVol;
-          if (typeof saved.excludeMajors === "boolean") el.excludeMajors.checked = saved.excludeMajors;
-          if (typeof saved.excludeGold === "boolean") el.excludeGold.checked = saved.excludeGold;
-        }
-      } catch (_) {}
-      function saveFilters() {
-        try {
-          localStorage.setItem("cht_filters_v1", JSON.stringify({
-            minVol: el.minVol.value,
-            excludeMajors: el.excludeMajors.checked,
-            excludeGold: el.excludeGold.checked,
-          }));
-        } catch (_) {}
-      }
-      ["minVol", "excludeMajors", "excludeGold"].forEach(function (id) {
-        document.getElementById(id).addEventListener("change", saveFilters);
-      });
-
-      load(false);
-    })();
-  </script>
-</body>
-</html>
+<footer>訊號只根據成交量＋價格動能計算，並非投資建議；本頁唔會自動落單。加密貨幣波動極大，高風險，請自行判斷及控制注碼。<br>數據每90秒由 Binance 即時更新</footer>
+</div>
+<script src="hot.js"></script>
+<script>
+(function(){
+const H=window.HotTracker,$=id=>document.getElementById(id),POLL=90000;
+const MAJ=new Set(["BTCUSDT","ETHUSDT"]),GOLD=new Set(["PAXGUSDT","XAUTUSDT"]);
+const BADGE={hot:"🔥 強勢",up:"⬆️ 轉強",warn:"⚠️ 小心"};
+let data=null,busy=false;
+const pct=v=>(v>=0?"+":"")+v.toFixed(2)+"%",cls=v=>v>=0?"pos":"neg";
+const px=n=>n>=1000?n.toLocaleString(undefined,{maximumFractionDigits:2}):n>=1?n.toFixed(4):n>=0.01?n.toFixed(5):n.toPrecision(4);
+const vol=n=>n>=1e9?"$"+(n/1e9).toFixed(2)+"B":"$"+(n/1e6).toFixed(1)+"M";
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const link=s=>"https://www.binance.com/en/trade/"+s.replace(/USDT$/,"_USDT")+"?type=spot";
+function spark(c,stop){const w=300,h=70,lo=Math.min(...c,stop),hi=Math.max(...c),k=hi>lo?hi-lo:1;
+ const y=v=>h-4-(v-lo)/k*(h-8),pts=c.map((v,i)=>(i/(c.length-1)*w).toFixed(1)+","+y(v).toFixed(1)).join(" ");
+ const col=c[c.length-1]>=c[0]?"#3dcf8e":"#f07178";
+ return '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" height="70"><line x1="0" x2="'+w+'" y1="'+y(stop)+'" y2="'+y(stop)+'" stroke="#e6b84d" stroke-dasharray="4 4" stroke-width="1"/><polyline fill="none" stroke="'+col+'" stroke-width="2" points="'+pts+'"/></svg>';}
+function filt(rows){const mv=+$("minVol").value||0;return rows.filter(r=>r.quote_volume_24h>=mv&&!($("exMaj").checked&&MAJ.has(r.symbol))&&!($("exGold").checked&&GOLD.has(r.symbol)));}
+function render(){if(!data)return;const rows=filt(data.rows),m=H.mood(data);
+ const lab={strong:"強 💪 好多幣喺度升",neutral:"中性 😐 有啲機會",weak:"偏弱 🥶 機會少，宜觀望"}[m.level];
+ $("mood").className="mood "+m.level;
+ $("mood").innerHTML='<div class="small">市況（過去1小時）</div><div class="big">'+lab+'</div><div class="small">'+data.rising1h+' / '+data.measured+' 隻高成交幣喺1小時內上升</div><div class="bar"><i style="width:'+(m.ratio*100).toFixed(0)+'%"></i></div>';
+ const top=rows.slice(0,3);
+ $("cards").innerHTML=top.length?top.map(r=>{const c=H.classify(r);return '<div class="card '+c+'"><div class="ch"><a class="coin" href="'+link(r.symbol)+'" target="_blank" rel="noopener">'+esc(r.base)+'</a><span class="badge '+c+'">'+BADGE[c]+'</span></div><div class="why">'+H.reason(r)+'</div>'+spark(r.closes,r.low_1h)+'<div class="small">過去6小時走勢（每15分鐘）· 黃虛線 = 參考止蝕位</div><div class="nums"><div><span class="small">現價</span><b>'+px(r.price)+'</b></div><div><span class="small">參考止蝕位</span><b style="color:var(--w)">'+px(r.low_1h)+'</b></div><div><span class="small">熱度分數</span><b>'+r.score.toFixed(0)+'</b></div></div></div>';}).join(""):'<div class="card">而家冇幣符合條件，市況淡，可以休息下。</div>';
+ const t10=rows.slice(0,10);
+ $("bars").innerHTML=t10.map(r=>'<div class="brow"><span>'+esc(r.base)+'</span><span class="t"><i style="width:'+r.score.toFixed(0)+'%;background:'+({hot:"#3dcf8e",up:"#5b9fd4",warn:"#e6b84d"}[H.classify(r)])+'"></i></span><b>'+r.score.toFixed(0)+'</b></div>').join("")||'<div class="small">冇數據</div>';
+ const w=320,h=200,p=28;if(t10.length){const xs=t10.map(r=>r.vol_spike),ys=t10.map(r=>r.pct_1h);
+ const x0=0,x1=Math.max(...xs,2),y0=Math.min(...ys,0),y1=Math.max(...ys,1);
+ const X=v=>p+(v-x0)/(x1-x0)*(w-p-10),Y=v=>h-p-(v-y0)/(y1-y0)*(h-p-10);
+ let s='<svg viewBox="0 0 '+w+' '+h+'"><line x1="'+p+'" x2="'+w+'" y1="'+Y(0)+'" y2="'+Y(0)+'" stroke="#2d3a4f"/><line x1="'+X(1)+'" x2="'+X(1)+'" y1="0" y2="'+(h-p)+'" stroke="#2d3a4f" stroke-dasharray="3 3"/>';
+ s+='<text x="'+(w/2)+'" y="'+(h-6)+'" fill="#8b9bb4" font-size="11" text-anchor="middle">成交量倍數 →</text><text x="10" y="'+(h/2)+'" fill="#8b9bb4" font-size="11" transform="rotate(-90 10 '+(h/2)+')" text-anchor="middle">1小時升幅 →</text>';
+ t10.forEach(r=>{s+='<circle cx="'+X(r.vol_spike)+'" cy="'+Y(r.pct_1h)+'" r="'+(3+r.score/15)+'" fill="'+(r.pct_1h>=0?"#3dcf8e":"#f07178")+'" opacity=".7"/><text x="'+(X(r.vol_spike)+6)+'" y="'+(Y(r.pct_1h)-6)+'" fill="#e7ecf3" font-size="10">'+esc(r.base)+'</text>';});
+ $("scatter").innerHTML=s+'</svg>';}else $("scatter").innerHTML="";
+ $("tb").innerHTML=rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><a style="color:inherit" href="'+link(r.symbol)+'" target="_blank" rel="noopener">'+esc(r.base)+'</a></td><td>'+r.score.toFixed(1)+'</td><td>'+px(r.price)+'</td><td class="'+cls(r.pct_15m)+'">'+pct(r.pct_15m)+'</td><td class="'+cls(r.pct_1h)+'">'+pct(r.pct_1h)+'</td><td class="'+cls(r.pct_24h)+'">'+pct(r.pct_24h)+'</td><td>'+r.vol_spike.toFixed(2)+'x</td><td>'+vol(r.quote_volume_24h)+'</td></tr>').join("");
+}
+async function load(){if(busy)return;busy=true;$("btnR").disabled=true;$("st").textContent="更新緊…";
+ try{data=await H.compute({topN:20});$("msg").className="msg";render();$("st").textContent="更新於 "+new Date().toLocaleTimeString("zh-HK",{hour:"2-digit",minute:"2-digit"})+" · 每90秒自動更新";}
+ catch(e){$("msg").textContent="攞唔到 Binance 數據（"+e.message+"），稍後再試。";$("msg").className="msg show";$("st").textContent="連線失敗";}
+ busy=false;$("btnR").disabled=false;}
+$("btnR").onclick=load;["minVol","exMaj","exGold"].forEach(i=>$(i).addEventListener("input",render));
+load();setInterval(load,POLL);
+})();
+</script></body></html>

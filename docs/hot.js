@@ -1,6 +1,6 @@
 /* Crypto Hot Tracker — client-side scorer (mirrors src/scorer.py + run_once.py). Read-only, no keys, no orders. */
 (function (root) {
-  const CFG = {"binance_base_url": "https://api.binance.com", "quote_asset": "USDT", "min_quote_volume_usdt": 5000000, "top_n": 20, "klines_interval": "15m", "klines_limit": 20, "vol_spike_lookback": 16, "weights": {"pct_15m": 0.35, "pct_1h": 0.2, "vol_spike": 0.3, "quote_vol_rank": 0.15}, "stable_bases": ["USDC", "FDUSD", "TUSD", "BUSD", "DAI", "USDP", "USDE", "USD1", "EUR", "AEUR", "EURI", "GBP", "AUD", "TRY", "BRL", "BIDR", "PAX", "UST", "USTC", "USDD", "GUSD", "SUSD", "FRAX", "LUSD", "PYUSD", "USDJ", "XUSD", "BFUSD", "U", "RLUSD", "RWUSD"], "denylist_file": "denylist.txt", "request_timeout_sec": 15, "max_retries": 4, "backoff_base_sec": 1.0, "klines_batch_pause_sec": 0.05, "include_majors": true, "klines_workers": 8};
+  const CFG = {"binance_base_url": "https://api.binance.com", "quote_asset": "USDT", "min_quote_volume_usdt": 5000000, "top_n": 20, "klines_interval": "15m", "klines_limit": 24, "vol_spike_lookback": 16, "weights": {"pct_15m": 0.35, "pct_1h": 0.2, "vol_spike": 0.3, "quote_vol_rank": 0.15}, "stable_bases": ["USDC", "FDUSD", "TUSD", "BUSD", "DAI", "USDP", "USDE", "USD1", "EUR", "AEUR", "EURI", "GBP", "AUD", "TRY", "BRL", "BIDR", "PAX", "UST", "USTC", "USDD", "GUSD", "SUSD", "FRAX", "LUSD", "PYUSD", "USDJ", "XUSD", "BFUSD", "U", "RLUSD", "RWUSD"], "denylist_file": "denylist.txt", "request_timeout_sec": 15, "max_retries": 4, "backoff_base_sec": 1.0, "klines_batch_pause_sec": 0.05, "include_majors": true, "klines_workers": 8};
   const DENY = new Set([]);
   const BASES = ["https://api.binance.com", "https://data-api.binance.vision", "https://api1.binance.com", "https://api2.binance.com", "https://api3.binance.com"];
   let goodBase = null;
@@ -50,7 +50,8 @@
     if (prior.length < Math.max(4, Math.floor(lb / 2))) prior = v.slice(0, -1);
     if (!prior.length) return null;
     const avg = prior.reduce((a, b) => a + b, 0) / prior.length;
-    return { pct_15m: (now - c15) / c15 * 100, pct_1h: (now - c1h) / c1h * 100, vol_spike: avg > 0 ? v[v.length - 1] / avg : 0, price: now };
+    const lows = kl.map(k => parseFloat(k[3]) || 0);
+    return { closes: c, low_1h: Math.min(...lows.slice(-4)), pct_15m: (now - c15) / c15 * 100, pct_1h: (now - c1h) / c1h * 100, vol_spike: avg > 0 ? v[v.length - 1] / avg : 0, price: now };
   }
 
   function minmax(a) {
@@ -82,23 +83,41 @@
     const cands = filterUniverse(tickers);
     const lb = CFG.vol_spike_lookback;
     let errors = 0;
-    const enriched = (await pool(cands, CFG.klines_workers || 8, async c => {
+    const all = (await pool(cands, CFG.klines_workers || 8, async c => {
       let kl;
       try { kl = await getJson("/api/v3/klines?symbol=" + c.symbol + "&interval=" + CFG.klines_interval + "&limit=" + CFG.klines_limit); }
       catch (e) { errors++; return null; }
       const m = klineMetrics(kl, lb);
-      if (!m || m.pct_15m <= 0) return null;
-      return Object.assign({}, c, { pct_15m: m.pct_15m, pct_1h: m.pct_1h, vol_spike: m.vol_spike, price: c.price || m.price });
+      if (!m) return null;
+      return Object.assign({}, c, { pct_15m: m.pct_15m, pct_1h: m.pct_1h, vol_spike: m.vol_spike, closes: m.closes, low_1h: m.low_1h, price: c.price || m.price });
     })).filter(Boolean);
+    const measured = all.length, rising15 = all.filter(r => r.pct_15m > 0).length, rising1h = all.filter(r => r.pct_1h > 0).length;
+    const enriched = all.filter(r => r.pct_15m > 0);
     const scored = score(enriched);
     const topN = opts.topN || CFG.top_n;
     return {
       updated_at: new Date().toISOString(), top_n: topN, universe_scored: scored.length,
-      candidates: cands.length, kline_errors: errors, source: goodBase,
+      candidates: cands.length, measured, rising15, rising1h, kline_errors: errors, source: goodBase,
       rows: scored.slice(0, topN), count: Math.min(topN, scored.length)
     };
   }
 
-  const api = { compute, filterUniverse, klineMetrics, score, CFG };
+  function classify(r) {
+    if (r.pct_24h < -15 || r.vol_spike < 1) return "warn";
+    if (r.pct_1h >= 2 && r.vol_spike >= 1.5) return "hot";
+    return "up";
+  }
+  function reason(r) {
+    const f = x => (x >= 0 ? "升" : "跌") + Math.abs(x).toFixed(1) + "%";
+    let s = "過去1小時" + f(r.pct_1h) + "，最近15分鐘" + f(r.pct_15m) + "，成交量係平時" + r.vol_spike.toFixed(1) + "倍";
+    if (r.pct_24h < -15) s += "；但24小時仍" + f(r.pct_24h) + "，小心假突破";
+    else if (r.vol_spike < 1) s += "；成交量未跟上，升勢未確認";
+    return s + "。";
+  }
+  function mood(d) {
+    const p = d.measured ? d.rising1h / d.measured : 0;
+    return { ratio: p, level: p >= 0.6 ? "strong" : p >= 0.4 ? "neutral" : "weak" };
+  }
+  const api = { classify, reason, mood, compute, filterUniverse, klineMetrics, score, CFG };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.HotTracker = api;
 })(typeof window !== "undefined" ? window : globalThis);
