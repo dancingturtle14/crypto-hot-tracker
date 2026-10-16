@@ -1,108 +1,29 @@
 <!DOCTYPE html>
 <html lang="zh-Hant"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f1419"><title>幣圈熱度雷達</title>
-<style>
-:root{--bg:#0f1419;--s:#1a2332;--s2:#243044;--b:#2d3a4f;--t:#e7ecf3;--m:#8b9bb4;--g:#3dcf8e;--r:#f07178;--w:#e6b84d;--a:#5b9fd4}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,"PingFang HK","Noto Sans TC",sans-serif;background:var(--bg);color:var(--t);line-height:1.45;padding:12px 12px 40px;-webkit-font-smoothing:antialiased}
-.wrap{max-width:760px;margin:0 auto}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-h1{font-size:1.2rem}h2{font-size:1.05rem;margin:18px 0 8px}
-.small{font-size:.78rem;color:var(--m)}
-button{background:var(--s2);border:1px solid var(--b);color:var(--t);border-radius:8px;padding:7px 12px;font-size:.9rem}
-.mood{border-radius:12px;padding:12px 14px;border:1px solid var(--b);background:var(--s)}
-.mood .big{font-size:1.4rem;font-weight:700}
-.mood.strong{border-color:var(--g)}.mood.strong .big{color:var(--g)}
-.mood.neutral .big{color:var(--a)}
-.mood.weak{border-color:var(--w)}.mood.weak .big{color:var(--w)}
-.bar{height:8px;background:var(--s2);border-radius:4px;margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;background:var(--g)}
-.card{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:14px;margin-bottom:10px}
-.card.warn{border-color:rgba(230,184,77,.6)}.card.hot{border-color:rgba(61,207,142,.6)}
-.ch{display:flex;justify-content:space-between;align-items:center}
-.coin{font-size:1.6rem;font-weight:800;color:var(--t);text-decoration:none}
-.badge{font-size:.95rem;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--s2)}
-.badge.hot{color:var(--g)}.badge.up{color:var(--a)}.badge.warn{color:var(--w)}
-.why{font-size:1rem;margin:8px 0}
-.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
-.nums div{background:var(--bg);border-radius:8px;padding:6px 8px}
-.nums b{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums}
-.pos{color:var(--g)}.neg{color:var(--r)}
-svg{display:block;width:100%}
-.panel{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px}
-.brow{display:grid;grid-template-columns:70px 1fr 40px;align-items:center;gap:8px;margin:5px 0;font-size:.9rem}
-.brow .t{height:14px;background:var(--s2);border-radius:4px;overflow:hidden}.brow .t i{display:block;height:100%;background:var(--a)}
-details{margin-top:12px}summary{cursor:pointer;padding:10px 12px;background:var(--s);border:1px solid var(--b);border-radius:10px;font-weight:600}
-.tw{overflow-x:auto;margin-top:8px}table{width:100%;border-collapse:collapse;font-size:.85rem;min-width:620px}
-th,td{padding:8px;border-bottom:1px solid var(--b);text-align:right;white-space:nowrap}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}th{color:var(--m);font-weight:600}
-.set{display:grid;gap:10px;padding:12px;background:var(--s);border-radius:10px;margin-top:8px}
-.set input[type=number]{width:100%;background:var(--bg);border:1px solid var(--b);color:var(--t);border-radius:8px;padding:8px;font-size:1rem}
-.msg{padding:10px;border-radius:10px;background:rgba(230,184,77,.12);color:var(--w);margin:10px 0;display:none}.msg.show{display:block}
-footer{margin-top:18px;font-size:.75rem;color:var(--m);text-align:center}
-</style></head><body><div class="wrap">
-<header><div><h1>🔥 幣圈熱度雷達</h1><div class="small" id="st">載入緊即時數據…</div></div><button id="btnR">刷新</button></header>
-<div id="msg" class="msg"></div>
-<div id="mood" class="mood"><div class="small">市況</div><div class="big">—</div></div>
-
-<h2>而家值得留意</h2>
-<div id="cards"><div class="card small">計緊…</div></div>
-
-<h2>熱度排行 Top 10</h2>
-<div class="panel"><div id="bars"></div>
-<div class="small" style="margin-top:6px">熱度分數 0–100：綜合15分鐘升幅、1小時升幅、成交量倍數同成交額，越高越熱。</div></div>
-
-<h2>升幅 vs 成交量</h2>
-<div class="panel"><div id="scatter"></div>
-<div class="small">右上角 = 升得多又多人買，最值得睇。點大細 = 熱度分數。</div></div>
-
-<details><summary>⚙️ 設定</summary><div class="set">
-<label class="small">最低24小時成交額 (USDT)<input type="number" id="minVol" value="5000000" step="1000000"></label>
-<label><input type="checkbox" id="exMaj"> 唔睇 BTC / ETH</label>
-<label><input type="checkbox" id="exGold" checked> 唔睇黃金幣 (PAXG / XAUT)</label>
-</div></details>
-<details><summary>📋 睇詳細數據</summary><div class="tw"><table><thead><tr><th>#</th><th>幣</th><th>熱度分數</th><th>價格</th><th>15分鐘升幅</th><th>1小時升幅</th><th>24小時升跌</th><th>成交量倍數</th><th>24小時成交額</th></tr></thead><tbody id="tb"></tbody></table></div></details>
-
-<footer>訊號只根據成交量＋價格動能計算，並非投資建議；本頁唔會自動落單。加密貨幣波動極大，高風險，請自行判斷及控制注碼。<br>數據每90秒由 Binance 即時更新</footer>
+<meta name="theme-color" content="#1e1e1e"><title>幣圈熱度雷達</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<div id="app">
+ <aside id="side">
+  <div class="side-h"><span>🔥 幣圈熱度雷達</span><button class="ib" id="sideClose" aria-label="關閉">✕</button></div>
+  <input id="search" class="inp" placeholder="搜尋幣…" autocomplete="off">
+  <div id="tree"></div>
+  <div class="side-f small" id="st">載入緊…</div>
+ </aside>
+ <div id="scrim"></div>
+ <div id="mainCol">
+  <div id="topbar">
+   <button class="ib" id="menuBtn" aria-label="選單">☰</button>
+   <div id="tabs"></div>
+   <button class="ib" id="palBtn" aria-label="搜尋指令">🔍</button>
+   <button class="ib" id="btnR" aria-label="刷新">⟳</button>
+  </div>
+  <main id="view"></main>
+ </div>
 </div>
+<div id="pop" class="pop"></div>
+<div id="pal" class="pal-wrap"><div class="pal"><input id="palIn" class="inp" placeholder="跳去幣或者指令…（Ctrl/⌘+K）" autocomplete="off"><div id="palList"></div></div></div>
 <script src="hot.js"></script>
-<script>
-(function(){
-const H=window.HotTracker,$=id=>document.getElementById(id),POLL=90000;
-const MAJ=new Set(["BTCUSDT","ETHUSDT"]),GOLD=new Set(["PAXGUSDT","XAUTUSDT"]);
-const BADGE={hot:"🔥 強勢",up:"⬆️ 轉強",warn:"⚠️ 小心"};
-let data=null,busy=false;
-const pct=v=>(v>=0?"+":"")+v.toFixed(2)+"%",cls=v=>v>=0?"pos":"neg";
-const px=n=>n>=1000?n.toLocaleString(undefined,{maximumFractionDigits:2}):n>=1?n.toFixed(4):n>=0.01?n.toFixed(5):n.toPrecision(4);
-const vol=n=>n>=1e9?"$"+(n/1e9).toFixed(2)+"B":"$"+(n/1e6).toFixed(1)+"M";
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const link=s=>"https://www.binance.com/en/trade/"+s.replace(/USDT$/,"_USDT")+"?type=spot";
-function spark(c,stop){const w=300,h=70,lo=Math.min(...c,stop),hi=Math.max(...c),k=hi>lo?hi-lo:1;
- const y=v=>h-4-(v-lo)/k*(h-8),pts=c.map((v,i)=>(i/(c.length-1)*w).toFixed(1)+","+y(v).toFixed(1)).join(" ");
- const col=c[c.length-1]>=c[0]?"#3dcf8e":"#f07178";
- return '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" height="70"><line x1="0" x2="'+w+'" y1="'+y(stop)+'" y2="'+y(stop)+'" stroke="#e6b84d" stroke-dasharray="4 4" stroke-width="1"/><polyline fill="none" stroke="'+col+'" stroke-width="2" points="'+pts+'"/></svg>';}
-function filt(rows){const mv=+$("minVol").value||0;return rows.filter(r=>r.quote_volume_24h>=mv&&!($("exMaj").checked&&MAJ.has(r.symbol))&&!($("exGold").checked&&GOLD.has(r.symbol)));}
-function render(){if(!data)return;const rows=filt(data.rows),m=H.mood(data);
- const lab={strong:"強 💪 好多幣喺度升",neutral:"中性 😐 有啲機會",weak:"偏弱 🥶 機會少，宜觀望"}[m.level];
- $("mood").className="mood "+m.level;
- $("mood").innerHTML='<div class="small">市況（過去1小時）</div><div class="big">'+lab+'</div><div class="small">'+data.rising1h+' / '+data.measured+' 隻高成交幣喺1小時內上升</div><div class="bar"><i style="width:'+(m.ratio*100).toFixed(0)+'%"></i></div>';
- const top=rows.slice(0,3);
- $("cards").innerHTML=top.length?top.map(r=>{const c=H.classify(r);return '<div class="card '+c+'"><div class="ch"><a class="coin" href="'+link(r.symbol)+'" target="_blank" rel="noopener">'+esc(r.base)+'</a><span class="badge '+c+'">'+BADGE[c]+'</span></div><div class="why">'+H.reason(r)+'</div>'+spark(r.closes,r.low_1h)+'<div class="small">過去6小時走勢（每15分鐘）· 黃虛線 = 參考止蝕位</div><div class="nums"><div><span class="small">現價</span><b>'+px(r.price)+'</b></div><div><span class="small">參考止蝕位</span><b style="color:var(--w)">'+px(r.low_1h)+'</b></div><div><span class="small">熱度分數</span><b>'+r.score.toFixed(0)+'</b></div></div></div>';}).join(""):'<div class="card">而家冇幣符合條件，市況淡，可以休息下。</div>';
- const t10=rows.slice(0,10);
- $("bars").innerHTML=t10.map(r=>'<div class="brow"><span>'+esc(r.base)+'</span><span class="t"><i style="width:'+r.score.toFixed(0)+'%;background:'+({hot:"#3dcf8e",up:"#5b9fd4",warn:"#e6b84d"}[H.classify(r)])+'"></i></span><b>'+r.score.toFixed(0)+'</b></div>').join("")||'<div class="small">冇數據</div>';
- const w=320,h=200,p=28;if(t10.length){const xs=t10.map(r=>r.vol_spike),ys=t10.map(r=>r.pct_1h);
- const x0=0,x1=Math.max(...xs,2),y0=Math.min(...ys,0),y1=Math.max(...ys,1);
- const X=v=>p+(v-x0)/(x1-x0)*(w-p-10),Y=v=>h-p-(v-y0)/(y1-y0)*(h-p-10);
- let s='<svg viewBox="0 0 '+w+' '+h+'"><line x1="'+p+'" x2="'+w+'" y1="'+Y(0)+'" y2="'+Y(0)+'" stroke="#2d3a4f"/><line x1="'+X(1)+'" x2="'+X(1)+'" y1="0" y2="'+(h-p)+'" stroke="#2d3a4f" stroke-dasharray="3 3"/>';
- s+='<text x="'+(w/2)+'" y="'+(h-6)+'" fill="#8b9bb4" font-size="11" text-anchor="middle">成交量倍數 →</text><text x="10" y="'+(h/2)+'" fill="#8b9bb4" font-size="11" transform="rotate(-90 10 '+(h/2)+')" text-anchor="middle">1小時升幅 →</text>';
- t10.forEach(r=>{s+='<circle cx="'+X(r.vol_spike)+'" cy="'+Y(r.pct_1h)+'" r="'+(3+r.score/15)+'" fill="'+(r.pct_1h>=0?"#3dcf8e":"#f07178")+'" opacity=".7"/><text x="'+(X(r.vol_spike)+6)+'" y="'+(Y(r.pct_1h)-6)+'" fill="#e7ecf3" font-size="10">'+esc(r.base)+'</text>';});
- $("scatter").innerHTML=s+'</svg>';}else $("scatter").innerHTML="";
- $("tb").innerHTML=rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><a style="color:inherit" href="'+link(r.symbol)+'" target="_blank" rel="noopener">'+esc(r.base)+'</a></td><td>'+r.score.toFixed(1)+'</td><td>'+px(r.price)+'</td><td class="'+cls(r.pct_15m)+'">'+pct(r.pct_15m)+'</td><td class="'+cls(r.pct_1h)+'">'+pct(r.pct_1h)+'</td><td class="'+cls(r.pct_24h)+'">'+pct(r.pct_24h)+'</td><td>'+r.vol_spike.toFixed(2)+'x</td><td>'+vol(r.quote_volume_24h)+'</td></tr>').join("");
-}
-async function load(){if(busy)return;busy=true;$("btnR").disabled=true;$("st").textContent="更新緊…";
- try{data=await H.compute({topN:20});$("msg").className="msg";render();$("st").textContent="更新於 "+new Date().toLocaleTimeString("zh-HK",{hour:"2-digit",minute:"2-digit"})+" · 每90秒自動更新";}
- catch(e){$("msg").textContent="攞唔到 Binance 數據（"+e.message+"），稍後再試。";$("msg").className="msg show";$("st").textContent="連線失敗";}
- busy=false;$("btnR").disabled=false;}
-$("btnR").onclick=load;["minVol","exMaj","exGold"].forEach(i=>$(i).addEventListener("input",render));
-load();setInterval(load,POLL);
-})();
-</script></body></html>
+<script src="app.js"></script>
+</body></html>

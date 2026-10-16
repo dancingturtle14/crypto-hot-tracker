@@ -103,7 +103,7 @@
   }
 
   function classify(r) {
-    if (r.pct_24h < -15 || r.vol_spike < 1) return "warn";
+    if (r.pct_24h < -15 || r.vol_spike < 1 || r.pct_1h < 0) return "warn";
     if (r.pct_1h >= 2 && r.vol_spike >= 1.5) return "hot";
     return "up";
   }
@@ -112,12 +112,26 @@
     let s = "過去1小時" + f(r.pct_1h) + "，最近15分鐘" + f(r.pct_15m) + "，成交量係平時" + r.vol_spike.toFixed(1) + "倍";
     if (r.pct_24h < -15) s += "；但24小時仍" + f(r.pct_24h) + "，小心假突破";
     else if (r.vol_spike < 1) s += "；成交量未跟上，升勢未確認";
+    else if (r.pct_1h < 0) s += "；但1小時仍係跌緊，可能只係短暫反彈";
     return s + "。";
   }
   function mood(d) {
     const p = d.measured ? d.rising1h / d.measured : 0;
     return { ratio: p, level: p >= 0.6 ? "strong" : p >= 0.4 ? "neutral" : "weak" };
   }
-  const api = { classify, reason, mood, compute, filterUniverse, klineMetrics, score, CFG };
+  function corr(a, b) {
+    const ra = [], rb = [];
+    const n = Math.min(a.length, b.length), oa = a.length - n, ob = b.length - n;
+    for (let i = 1; i < n; i++) { ra.push(a[oa+i] / a[oa+i-1] - 1); rb.push(b[ob+i] / b[ob+i-1] - 1); }
+    const m = ra.length; if (m < 4) return 0;
+    const ma = ra.reduce((x, y) => x + y, 0) / m, mb = rb.reduce((x, y) => x + y, 0) / m;
+    let sab = 0, saa = 0, sbb = 0;
+    for (let i = 0; i < m; i++) { const da = ra[i] - ma, db = rb[i] - mb; sab += da * db; saa += da * da; sbb += db * db; }
+    return saa > 0 && sbb > 0 ? sab / Math.sqrt(saa * sbb) : 0;
+  }
+  function fetchKlines(symbol, limit) {
+    return getJson("/api/v3/klines?symbol=" + symbol + "&interval=15m&limit=" + limit);
+  }
+  const api = { corr, fetchKlines, classify, reason, mood, compute, filterUniverse, klineMetrics, score, CFG };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.HotTracker = api;
 })(typeof window !== "undefined" ? window : globalThis);
