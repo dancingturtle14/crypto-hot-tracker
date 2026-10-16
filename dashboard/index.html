@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <title>Crypto Hot Tracker</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --accent: #5b9fd4;
+      --green: #3dcf8e;
+      --red: #f07178;
+      --warn: #e6b84d;
+      --score: #7eb8f0;
+      --radius: 10px;
+      --font: "SF Pro Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: "SF Mono", "Menlo", "Consolas", monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+      min-height: 100dvh;
+      padding: 12px 12px 48px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 8px 16px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+    .sub { color: var(--muted); font-size: 0.85rem; }
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 10px;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+    .dot.stale { background: var(--warn); }
+    .dot.err { background: var(--red); }
+    .banner {
+      display: none;
+      background: rgba(230, 184, 77, 0.12);
+      border: 1px solid rgba(230, 184, 77, 0.45);
+      color: var(--warn);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+    }
+    .banner.show { display: block; }
+    .banner.err {
+      background: rgba(240, 113, 120, 0.12);
+      border-color: rgba(240, 113, 120, 0.45);
+      color: var(--red);
+    }
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+    @media (min-width: 640px) {
+      .filters { grid-template-columns: 1.2fr 1fr 1fr; align-items: end; }
+    }
+    .field label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .field input[type="number"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 1rem;
+      font-family: var(--mono);
+    }
+    .checks {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 2px;
+    }
+    .checks label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .checks input { width: 16px; height: 16px; accent-color: var(--accent); }
+    .meta-line {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+      min-width: 720px;
+    }
+    th {
+      text-align: left;
+      padding: 10px 10px;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      background: var(--surface2);
+    }
+    th.num, td.num { text-align: right; }
+    td {
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(45, 58, 79, 0.55);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(91, 159, 212, 0.06); }
+    .sym a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .sym a:hover { color: var(--accent); text-decoration: underline; }
+    .score {
+      font-family: var(--mono);
+      font-weight: 650;
+      color: var(--score);
+    }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .mono { font-family: var(--mono); font-size: 0.84em; }
+    .empty {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--muted);
+    }
+    footer {
+      margin-top: 16px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button.refresh {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    button.refresh:hover { border-color: var(--accent); color: var(--accent); }
+    button.refresh:disabled { opacity: 0.5; cursor: wait; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Crypto Hot Tracker</h1>
+      <span class="sub">成交量 + 短線動能 · 人手 day trade · 唔自動下單</span>
+    </header>
+
+    <div class="status-row">
+      <span class="pill"><span id="statusDot" class="dot"></span> <span id="statusText">載入中…</span></span>
+      <span class="pill">數據 <span id="dataAge">—</span></span>
+      <span class="pill">下次刷新 <span id="nextRefresh">—</span></span>
+      <button type="button" class="refresh" id="btnRefresh">立即刷新</button>
+    </div>
+
+    <div id="banner" class="banner" role="status"></div>
+
+    <div class="filters">
+      <div class="field">
+        <label for="minVol">Min 24h volume (USDT)</label>
+        <input type="number" id="minVol" min="0" step="100000" value="5000000" />
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" id="excludeMajors" /> Exclude majors (BTC / ETH)</label>
+        <label><input type="checkbox" id="excludeGold" checked /> Exclude gold (PAXG / XAUT)</label>
+      </div>
+      <div class="meta-line" id="filterSummary" style="align-self:end; margin:0;">—</div>
+    </div>
+
+    <div class="meta-line" id="metaLine">—</div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Symbol</th>
+            <th class="num">Score</th>
+            <th class="num">Price</th>
+            <th class="num">15m %</th>
+            <th class="num">1h %</th>
+            <th class="num">24h %</th>
+            <th class="num">Vol spike</th>
+            <th class="num">24h Vol</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="9" class="empty">Loading latest.json…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      Phase 2 · read-only · polls <code>out/latest.json</code> every <span id="pollSec">90</span>s ·
+      stale banner if data &gt; 10 min old
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const POLL_MS = 90_000;
+      const STALE_MS = 10 * 60_000;
+      const MAJORS = new Set(["BTCUSDT", "ETHUSDT"]);
+      const GOLD = new Set(["PAXGUSDT", "XAUTUSDT"]);
+      // Prefer absolute path when served from project root; fall back for file:// or nested.
+      const JSON_URLS = ["/out/latest.json", "../out/latest.json", "./latest.json"];
+
+      const el = {
+        tbody: document.getElementById("tbody"),
+        banner: document.getElementById("banner"),
+        statusDot: document.getElementById("statusDot"),
+        statusText: document.getElementById("statusText"),
+        dataAge: document.getElementById("dataAge"),
+        nextRefresh: document.getElementById("nextRefresh"),
+        metaLine: document.getElementById("metaLine"),
+        filterSummary: document.getElementById("filterSummary"),
+        minVol: document.getElementById("minVol"),
+        excludeMajors: document.getElementById("excludeMajors"),
+        excludeGold: document.getElementById("excludeGold"),
+        btnRefresh: document.getElementById("btnRefresh"),
+        pollSec: document.getElementById("pollSec"),
+      };
+      el.pollSec.textContent = String(POLL_MS / 1000);
+
+      let raw = null;
+      let pollTimer = null;
+      let countdownTimer = null;
+      let nextAt = 0;
+
+      function fmtPct(v) {
+        if (v == null || Number.isNaN(v)) return "—";
+        const n = Number(v);
+        const s = (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
+        return s;
+      }
+      function pctClass(v) {
+        if (v == null || Number.isNaN(v)) return "";
+        return Number(v) >= 0 ? "pos" : "neg";
+      }
+      function fmtPrice(v) {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return "—";
+        if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        if (n >= 1) return n.toFixed(4);
+        if (n >= 0.01) return n.toFixed(5);
+        return n.toPrecision(4);
+      }
+      function fmtVol(v) {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return "—";
+        if (n >= 1e9) return "$" + (n / 1e9).toFixed(2) + "B";
+        if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
+        if (n >= 1e3) return "$" + (n / 1e3).toFixed(1) + "K";
+        return "$" + n.toFixed(0);
+      }
+      function fmtSpike(v) {
+        if (v == null || Number.isNaN(v)) return "—";
+        return Number(v).toFixed(2) + "x";
+      }
+      function fmtScore(v) {
+        if (v == null || Number.isNaN(v)) return "—";
+        return Number(v).toFixed(1);
+      }
+      function parseUpdated(s) {
+        if (!s) return null;
+        const d = new Date(s);
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+      function ageLabel(updated) {
+        if (!updated) return "unknown";
+        const ms = Date.now() - updated.getTime();
+        if (ms < 0) return "just now";
+        const sec = Math.floor(ms / 1000);
+        if (sec < 60) return sec + "s ago";
+        const min = Math.floor(sec / 60);
+        if (min < 60) return min + "m ago";
+        const hr = Math.floor(min / 60);
+        return hr + "h " + (min % 60) + "m ago";
+      }
+      function binanceUrl(symbol) {
+        // BTCUSDT → BTC_USDT
+        const m = String(symbol).match(/^(.+)(USDT|USDC|BUSD|FDUSD)$/i);
+        const pair = m ? m[1] + "_" + m[2] : symbol;
+        return "https://www.binance.com/en/trade/" + encodeURIComponent(pair) + "?type=spot";
+      }
+
+      function applyFilters(rows) {
+        const minVol = Number(el.minVol.value) || 0;
+        const exMaj = el.excludeMajors.checked;
+        const exGold = el.excludeGold.checked;
+        return rows.filter(function (r) {
+          if (Number(r.quote_volume_24h) < minVol) return false;
+          const sym = String(r.symbol || "").toUpperCase();
+          if (exMaj && MAJORS.has(sym)) return false;
+          if (exGold && GOLD.has(sym)) return false;
+          return true;
+        });
+      }
+
+      function render() {
+        if (!raw || !Array.isArray(raw.rows)) {
+          el.tbody.innerHTML = '<tr><td colspan="9" class="empty">No data</td></tr>';
+          return;
+        }
+        const filtered = applyFilters(raw.rows);
+        el.filterSummary.textContent =
+          "Showing " + filtered.length + " / " + raw.rows.length + " rows (file Top " + (raw.top_n || "—") + ")";
+        el.metaLine.textContent =
+          "updated_at: " + (raw.updated_at || "—") +
+          " · universe_scored: " + (raw.universe_scored ?? "—") +
+          " · count in file: " + (raw.count ?? raw.rows.length);
+
+        if (!filtered.length) {
+          el.tbody.innerHTML = '<tr><td colspan="9" class="empty">No rows match filters</td></tr>';
+          return;
+        }
+
+        el.tbody.innerHTML = filtered.map(function (r, i) {
+          return (
+            "<tr>" +
+            "<td class=\"num\">" + (i + 1) + "</td>" +
+            "<td class=\"sym\"><a href=\"" + binanceUrl(r.symbol) + "\" target=\"_blank\" rel=\"noopener\">" +
+              escapeHtml(r.symbol) + "</a></td>" +
+            "<td class=\"num score\">" + fmtScore(r.score) + "</td>" +
+            "<td class=\"num mono\">" + fmtPrice(r.price) + "</td>" +
+            "<td class=\"num mono " + pctClass(r.pct_15m) + "\">" + fmtPct(r.pct_15m) + "</td>" +
+            "<td class=\"num mono " + pctClass(r.pct_1h) + "\">" + fmtPct(r.pct_1h) + "</td>" +
+            "<td class=\"num mono " + pctClass(r.pct_24h) + "\">" + fmtPct(r.pct_24h) + "</td>" +
+            "<td class=\"num mono\">" + fmtSpike(r.vol_spike) + "</td>" +
+            "<td class=\"num mono\">" + fmtVol(r.quote_volume_24h) + "</td>" +
+            "</tr>"
+          );
+        }).join("");
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function setBanner(msg, isErr) {
+        if (!msg) {
+          el.banner.className = "banner";
+          el.banner.textContent = "";
+          return;
+        }
+        el.banner.className = "banner show" + (isErr ? " err" : "");
+        el.banner.textContent = msg;
+      }
+
+      function updateStatus(ok, errMsg) {
+        const updated = raw ? parseUpdated(raw.updated_at) : null;
+        const ageMs = updated ? Date.now() - updated.getTime() : null;
+        const stale = ageMs != null && ageMs > STALE_MS;
+
+        el.dataAge.textContent = ageLabel(updated);
+
+        if (!ok) {
+          el.statusDot.className = "dot err";
+          el.statusText.textContent = "Fetch failed";
+          setBanner(errMsg || "Cannot load latest.json. Is the server running from project root?", true);
+          return;
+        }
+        if (stale) {
+          el.statusDot.className = "dot stale";
+          el.statusText.textContent = "Stale data";
+          setBanner(
+            "Data is older than 10 minutes (" + ageLabel(updated) + "). Run: python3 -m src.run_once  (or start serve with --with-poller)",
+            false
+          );
+        } else {
+          el.statusDot.className = "dot";
+          el.statusText.textContent = "Live";
+          setBanner("");
+        }
+      }
+
+      async function fetchJson() {
+        let lastErr = null;
+        for (const url of JSON_URLS) {
+          try {
+            const res = await fetch(url + "?t=" + Date.now(), { cache: "no-store" });
+            if (!res.ok) {
+              lastErr = "HTTP " + res.status + " for " + url;
+              continue;
+            }
+            const data = await res.json();
+            return { data: data, url: url };
+          } catch (e) {
+            lastErr = String(e && e.message ? e.message : e);
+          }
+        }
+        throw new Error(lastErr || "All fetch paths failed");
+      }
+
+      async function load(manual) {
+        if (manual) el.btnRefresh.disabled = true;
+        try {
+          const { data } = await fetchJson();
+          raw = data;
+          render();
+          updateStatus(true);
+        } catch (e) {
+          updateStatus(false, String(e.message || e));
+          if (!raw) {
+            el.tbody.innerHTML = '<tr><td colspan="9" class="empty">Failed to load latest.json</td></tr>';
+          }
+        } finally {
+          el.btnRefresh.disabled = false;
+          scheduleNext();
+        }
+      }
+
+      function scheduleNext() {
+        if (pollTimer) clearTimeout(pollTimer);
+        nextAt = Date.now() + POLL_MS;
+        pollTimer = setTimeout(function () { load(false); }, POLL_MS);
+        tickCountdown();
+      }
+
+      function tickCountdown() {
+        if (countdownTimer) clearInterval(countdownTimer);
+        function paint() {
+          const left = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
+          el.nextRefresh.textContent = left + "s";
+        }
+        paint();
+        countdownTimer = setInterval(paint, 1000);
+      }
+
+      ["minVol", "excludeMajors", "excludeGold"].forEach(function (id) {
+        document.getElementById(id).addEventListener("input", render);
+        document.getElementById(id).addEventListener("change", render);
+      });
+      el.btnRefresh.addEventListener("click", function () { load(true); });
+
+      // Persist filter prefs lightly
+      try {
+        const saved = JSON.parse(localStorage.getItem("cht_filters_v1") || "null");
+        if (saved) {
+          if (saved.minVol != null) el.minVol.value = saved.minVol;
+          if (typeof saved.excludeMajors === "boolean") el.excludeMajors.checked = saved.excludeMajors;
+          if (typeof saved.excludeGold === "boolean") el.excludeGold.checked = saved.excludeGold;
+        }
+      } catch (_) {}
+      function saveFilters() {
+        try {
+          localStorage.setItem("cht_filters_v1", JSON.stringify({
+            minVol: el.minVol.value,
+            excludeMajors: el.excludeMajors.checked,
+            excludeGold: el.excludeGold.checked,
+          }));
+        } catch (_) {}
+      }
+      ["minVol", "excludeMajors", "excludeGold"].forEach(function (id) {
+        document.getElementById(id).addEventListener("change", saveFilters);
+      });
+
+      load(false);
+    })();
+  </script>
+</body>
+</html>

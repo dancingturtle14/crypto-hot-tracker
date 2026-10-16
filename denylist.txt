@@ -1,0 +1,2 @@
+# One BASE asset per line (e.g. LUNA). Empty / comments ignored.
+# Stables are already filtered via config stable_bases.

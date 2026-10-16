@@ -1,0 +1,2 @@
+# Phase 1 uses Python stdlib only (urllib, json, csv, math).
+# No third-party packages required.
